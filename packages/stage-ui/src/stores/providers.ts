@@ -1183,6 +1183,18 @@ export const useProvidersStore = defineStore('providers', () => {
         return provider
       },
       capabilities: {
+        listModels: async () => {
+          return [
+            {
+              id: 'octave',
+              name: 'Octave',
+              provider: 'hume-ai',
+              description: 'Hume AI expressive text-to-speech model',
+              contextLength: 0,
+              deprecated: false,
+            },
+          ] satisfies ModelInfo[]
+        },
         listVoices: async (config) => {
           const apiKey = (config.apiKey as string)?.trim()
           if (!apiKey) return []
@@ -1248,8 +1260,8 @@ export const useProvidersStore = defineStore('providers', () => {
               const voice = body.voice
               const model = body.model || config.model as string || 'inworld-tts-1.5-max'
 
-              // Use v1 streaming endpoint for lower latency (returns raw audio bytes)
-              const response = await fetch(`${baseUrl}tts/v1/voice:stream`, {
+              // Use v1 non-streaming endpoint (returns JSON with base64 audioContent)
+              const response = await fetch(`${baseUrl}tts/v1/voice`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Basic ${apiKey}`,
@@ -1269,7 +1281,24 @@ export const useProvidersStore = defineStore('providers', () => {
                 throw new Error(`Inworld TTS error: ${response.status} ${response.statusText}`)
               }
 
-              return response
+              // v1 non-streaming returns { audioContent: "base64..." }
+              const data = await response.json()
+              const audioContent = data.audioContent
+              if (!audioContent) {
+                throw new Error('Inworld TTS returned empty audio content')
+              }
+
+              // Decode base64 to binary
+              const binaryString = atob(audioContent)
+              const bytes = new Uint8Array(binaryString.length)
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i)
+              }
+
+              return new Response(bytes, {
+                status: 200,
+                headers: { 'Content-Type': 'audio/mpeg' },
+              })
             },
           }),
         }
