@@ -57,37 +57,9 @@ const audioUrl = ref('')
 const audioPlayer = ref<HTMLAudioElement | null>(null)
 const errorMessage = ref('')
 
-// Sync OpenAI Compatible model and voice from provider config
-function syncOpenAICompatibleSettings() {
-  if (activeSpeechProvider.value !== 'openai-compatible-audio-speech')
-    return
-
-  const providerConfig = providersStore.getProviderConfig(activeSpeechProvider.value)
-  // Sync model from provider config (override any existing value from previous provider)
-  if (providerConfig?.model) {
-    activeSpeechModel.value = providerConfig.model as string
-  }
-  else {
-    // If no model in provider config, use default
-    activeSpeechModel.value = 'tts-1'
-  }
-  // Sync voice from provider config (override any existing value from previous provider)
-  // Use updateCustomVoiceName to ensure proper reactivity
-  if (providerConfig?.voice) {
-    activeSpeechVoiceId.value = providerConfig.voice as string
-    updateCustomVoiceName(providerConfig.voice as string)
-  }
-  else {
-    // If no voice in provider config, use default
-    activeSpeechVoiceId.value = 'alloy'
-    updateCustomVoiceName('alloy')
-  }
-}
-
 onMounted(async () => {
   await providersStore.loadModelsForConfiguredProviders()
   await speechStore.loadVoicesForProvider(activeSpeechProvider.value)
-  syncOpenAICompatibleSettings()
 })
 
 watch(activeSpeechProvider, async (newProvider, oldProvider) => {
@@ -101,7 +73,6 @@ watch(activeSpeechProvider, async (newProvider, oldProvider) => {
     activeSpeechVoice.value = undefined
   }
 
-  syncOpenAICompatibleSettings()
 })
 
 watch(activeSpeechModel, async () => {
@@ -126,26 +97,8 @@ async function generateTestSpeech() {
 
   const providerConfig = providersStore.getProviderConfig(activeSpeechProvider.value)
 
-  // For OpenAI Compatible providers, fall back to provider config for model and voice
-  let model = activeSpeechModel.value
-  let voice = activeSpeechVoice.value
-
-  if (activeSpeechProvider.value === 'openai-compatible-audio-speech') {
-    if (!model && providerConfig?.model) {
-      model = providerConfig.model as string
-    }
-    if (!voice && providerConfig?.voice) {
-      voice = {
-        id: providerConfig.voice as string,
-        name: providerConfig.voice as string,
-        description: providerConfig.voice as string,
-        previewURL: '',
-        languages: [{ code: 'en', title: 'English' }],
-        provider: activeSpeechProvider.value,
-        gender: 'neutral',
-      }
-    }
-  }
+  const model = activeSpeechModel.value
+  const voice = activeSpeechVoice.value
 
   if (!model) {
     console.error('No model selected')
@@ -312,19 +265,8 @@ function updateCustomModelName(value: string | undefined) {
                 </div>
               </div>
 
-              <!-- Manual input for OpenAI Compatible -->
-              <div v-if="activeSpeechProvider === 'openai-compatible-audio-speech'">
-                <FieldInput
-                  :model-value="activeSpeechModel || ''"
-                  label="Model"
-                  description="Enter the TTS model to use for speech generation"
-                  placeholder="tts-1"
-                  @update:model-value="updateCustomModelName"
-                />
-              </div>
-
-              <!-- Model listing for other providers -->
-              <div v-else-if="supportsModelListing">
+              <!-- Model listing for providers -->
+              <div v-if="supportsModelListing">
                 <!-- Loading state -->
                 <div v-if="isLoadingActiveProviderModels" class="flex items-center justify-center py-4">
                   <div class="mr-2 animate-spin">
@@ -408,10 +350,9 @@ function updateCustomModelName(value: string | undefined) {
             </div>
           </div>
 
-          <!-- Error state -->
-          <!-- Voice selection with RadioCardManySelect (skip for OpenAI Compatible) -->
+          <!-- Voice selection with RadioCardManySelect -->
           <div
-            v-else-if="activeSpeechProvider !== 'openai-compatible-audio-speech' && availableVoices[activeSpeechProvider] && availableVoices[activeSpeechProvider].length > 0"
+            v-else-if="availableVoices[activeSpeechProvider] && availableVoices[activeSpeechProvider].length > 0"
             class="space-y-6"
           >
             <VoiceCardManySelect
@@ -487,40 +428,19 @@ function updateCustomModelName(value: string | undefined) {
             />
           </div>
 
-          <!-- Manual voice input when no voices are available or for OpenAI Compatible -->
+          <!-- Manual voice input when no voices are available -->
           <div
-            v-if="activeSpeechProvider === 'openai-compatible-audio-speech' || !availableVoices[activeSpeechProvider] || availableVoices[activeSpeechProvider].length === 0"
+            v-if="!availableVoices[activeSpeechProvider] || availableVoices[activeSpeechProvider].length === 0"
             class="mt-2 space-y-6"
           >
             <FieldInput
               type="text"
               :model-value="activeSpeechVoiceId || ''"
               label="Voice Name"
-              description="Enter the voice name for your custom voice"
-              placeholder="Enter voice name (e.g., 'alloy', 'echo')"
+              description="Enter the voice name or ID"
+              placeholder="Enter voice name or reference ID"
               @update:model-value="updateCustomVoiceName"
             />
-
-            <!-- Model selection for ElevenLabs -->
-            <div v-if="activeSpeechProvider === 'elevenlabs'">
-              <label class="mb-1 block text-sm font-medium">
-                Model
-              </label>
-              <select
-                v-model="activeSpeechModel"
-                class="w-full border border-neutral-300 rounded bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-              >
-                <option value="eleven_monolingual_v1">
-                  Monolingual v1
-                </option>
-                <option value="eleven_multilingual_v1">
-                  Multilingual v1
-                </option>
-                <option value="eleven_multilingual_v2">
-                  Multilingual v2
-                </option>
-              </select>
-            </div>
           </div>
         </div>
       </div>

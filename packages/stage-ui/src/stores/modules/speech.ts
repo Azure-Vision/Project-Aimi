@@ -65,12 +65,7 @@ export const useSpeechStore = defineStore('speech', () => {
   })
 
   const supportsSSML = computed(() => {
-    // Currently only ElevenLabs and some other providers support SSML
-    // only part voices are support SSML in cosyvoice-v2 which is provided by alibaba
-    if (activeSpeechProvider.value === 'alibaba-cloud-model-studio' && activeSpeechModel.value === 'cosyvoice-v2') {
-      return true
-    }
-    return ['elevenlabs', 'microsoft-speech', 'azure-speech', 'google', 'volcengine'].includes(activeSpeechProvider.value)
+    return ['elevenlabs'].includes(activeSpeechProvider.value)
   })
 
   async function loadVoicesForProvider(provider: string) {
@@ -126,10 +121,10 @@ export const useSpeechStore = defineStore('speech', () => {
 
   watch([activeSpeechVoiceId, availableVoices], ([voiceId, voices]) => {
     if (voiceId) {
-      // For OpenAI Compatible, create a custom voice object (no voices available from API)
-      if (activeSpeechProvider.value === 'openai-compatible-audio-speech') {
-        // Always update to match voiceId (in case it changed)
-        activeSpeechVoice.value = {
+      const foundVoice = voices[activeSpeechProvider.value]?.find(voice => voice.id === voiceId)
+      if (foundVoice || !activeSpeechVoice.value) {
+        // If found in available voices, use it; otherwise create a custom voice object for manual entry
+        activeSpeechVoice.value = foundVoice || {
           id: voiceId,
           name: voiceId,
           description: voiceId,
@@ -137,14 +132,6 @@ export const useSpeechStore = defineStore('speech', () => {
           languages: [{ code: 'en', title: 'English' }],
           provider: activeSpeechProvider.value,
           gender: 'neutral',
-        }
-      }
-      else {
-        // For other providers, find voice in available voices
-        const foundVoice = voices[activeSpeechProvider.value]?.find(voice => voice.id === voiceId)
-        // Only update if we found a voice, or if activeSpeechVoice is not set
-        if (foundVoice || !activeSpeechVoice.value) {
-          activeSpeechVoice.value = foundVoice
         }
       }
     }
@@ -229,15 +216,8 @@ export const useSpeechStore = defineStore('speech', () => {
     if (!activeSpeechProvider.value)
       return false
 
-    let hasModel = !!activeSpeechModel.value
-    let hasVoice = !!activeSpeechVoiceId.value
-
-    // For OpenAI Compatible providers, check provider config as fallback
-    if (activeSpeechProvider.value === 'openai-compatible-audio-speech') {
-      const providerConfig = providersStore.getProviderConfig(activeSpeechProvider.value)
-      hasModel ||= !!providerConfig?.model
-      hasVoice ||= !!providerConfig?.voice
-    }
+    const hasModel = !!activeSpeechModel.value
+    const hasVoice = !!activeSpeechVoiceId.value
 
     return hasModel && hasVoice
   })

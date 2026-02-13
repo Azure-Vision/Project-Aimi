@@ -10,11 +10,7 @@ import type {
 } from '@xsai-ext/providers/utils'
 import type { ProgressInfo } from '@xsai-transformers/shared/types'
 import type {
-  UnAlibabaCloudOptions,
-  UnDeepgramOptions,
   UnElevenLabsOptions,
-  UnMicrosoftOptions,
-  UnVolcengineOptions,
   VoiceProviderWithExtraOptions,
 } from 'unspeech'
 
@@ -42,7 +38,6 @@ import {
   createChatProvider,
   createEmbedProvider,
   createModelProvider,
-  createSpeechProvider,
   createTranscriptionProvider,
   merge,
 } from '@xsai-ext/providers/utils'
@@ -50,18 +45,12 @@ import { listModels } from '@xsai/model'
 import { isWebGPUSupported } from 'gpuu/webgpu'
 import { defineStore } from 'pinia'
 import {
-  createUnAlibabaCloud,
-  createUnDeepgram,
   createUnElevenLabs,
-  createUnMicrosoft,
-  createUnVolcengine,
   listVoices,
 } from 'unspeech'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { getKokoroWorker } from '../workers/kokoro'
-import { getDefaultKokoroModel, KOKORO_MODELS, kokoroModelsToModelInfo } from '../workers/kokoro/constants'
 import { createAliyunNLSProvider as createAliyunNlsStreamProvider } from './providers/aliyun/stream-transcription'
 import { models as elevenLabsModels } from './providers/elevenlabs/list-models'
 import { buildOpenAICompatibleProvider } from './providers/openai-compatible-builder'
@@ -325,36 +314,6 @@ export const useProvidersStore = defineStore('providers', () => {
         },
       },
     }),
-    'app-local-audio-speech': buildOpenAICompatibleProvider({
-      id: 'app-local-audio-speech',
-      name: 'App (Local)',
-      nameKey: 'settings.pages.providers.provider.app-local-audio-speech.title',
-      descriptionKey: 'settings.pages.providers.provider.app-local-audio-speech.description',
-      icon: 'i-lobe-icons:huggingface',
-      description: 'https://github.com/huggingface/candle',
-      category: 'speech',
-      tasks: ['text-to-speech', 'tts'],
-      isAvailableBy: isStageTamagotchi,
-      creator: createOpenAI,
-      validation: [],
-      validators: {
-        validateProviderConfig: (config) => {
-          if (!config.baseUrl) {
-            return {
-              errors: [new Error('Base URL is required.')],
-              reason: 'Base URL is required. This is likely a bug, report to developers on https://github.com/moeru-ai/airi/issues.',
-              valid: false,
-            }
-          }
-
-          return {
-            errors: [],
-            reason: '',
-            valid: true,
-          }
-        },
-      },
-    }),
     'app-local-audio-transcription': buildOpenAICompatibleProvider({
       id: 'app-local-audio-transcription',
       name: 'App (Local)',
@@ -365,36 +324,6 @@ export const useProvidersStore = defineStore('providers', () => {
       category: 'transcription',
       tasks: ['speech-to-text', 'automatic-speech-recognition', 'asr', 'stt'],
       isAvailableBy: isStageTamagotchi,
-      creator: createOpenAI,
-      validation: [],
-      validators: {
-        validateProviderConfig: (config) => {
-          if (!config.baseUrl) {
-            return {
-              errors: [new Error('Base URL is required.')],
-              reason: 'Base URL is required. This is likely a bug, report to developers on https://github.com/moeru-ai/airi/issues.',
-              valid: false,
-            }
-          }
-
-          return {
-            errors: [],
-            reason: '',
-            valid: true,
-          }
-        },
-      },
-    }),
-    'browser-local-audio-speech': buildOpenAICompatibleProvider({
-      id: 'browser-local-audio-speech',
-      name: 'Browser (Local)',
-      nameKey: 'settings.pages.providers.provider.browser-local-audio-speech.title',
-      descriptionKey: 'settings.pages.providers.provider.browser-local-audio-speech.description',
-      icon: 'i-lobe-icons:huggingface',
-      description: 'https://github.com/moeru-ai/xsai-transformers',
-      category: 'speech',
-      tasks: ['text-to-speech', 'tts'],
-      isAvailableBy: isBrowserAndMemoryEnough,
       creator: createOpenAI,
       validation: [],
       validators: {
@@ -688,237 +617,6 @@ export const useProvidersStore = defineStore('providers', () => {
       description: 'Connect to any API that follows the OpenAI specification.',
       creator: createOpenAI,
       validation: ['health'],
-    }),
-    'openai-audio-speech': buildOpenAICompatibleProvider({
-      id: 'openai-audio-speech',
-      name: 'OpenAI',
-      nameKey: 'settings.pages.providers.provider.openai.title',
-      descriptionKey: 'settings.pages.providers.provider.openai.description',
-      icon: 'i-lobe-icons:openai',
-      description: 'openai.com',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      defaultBaseUrl: 'https://api.openai.com/v1/',
-      creator: createOpenAI,
-      validation: ['health'],
-      capabilities: {
-        // NOTE: OpenAI does not provide an API endpoint to retrieve available voices.
-        // Voices are hardcoded here - this is a provider limitation, not an application limitation.
-        // Voice compatibility per https://platform.openai.com/docs/api-reference/audio/createSpeech:
-        // - tts-1 and tts-1-hd support: alloy, ash, coral, echo, fable, onyx, nova, sage, shimmer (9 voices)
-        // - gpt-4o-mini-tts supports all 13 voices: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse, marin, cedar
-        listVoices: async (_config: Record<string, unknown>) => {
-          return [
-            {
-              id: 'alloy',
-              name: 'Alloy',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'ash',
-              name: 'Ash',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'ballad',
-              name: 'Ballad',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'coral',
-              name: 'Coral',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'echo',
-              name: 'Echo',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'fable',
-              name: 'Fable',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'onyx',
-              name: 'Onyx',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'nova',
-              name: 'Nova',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'sage',
-              name: 'Sage',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'shimmer',
-              name: 'Shimmer',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['tts-1', 'tts-1-hd', 'gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'verse',
-              name: 'Verse',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'marin',
-              name: 'Marin',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-            {
-              id: 'cedar',
-              name: 'Cedar',
-              provider: 'openai-audio-speech',
-              languages: [],
-              compatibleModels: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'],
-            },
-          ] satisfies VoiceInfo[]
-        },
-        listModels: async () => {
-          // TESTING NOTES: All 4 models tested and confirmed working with fable voice:
-          // - tts-1: {model: "tts-1", input: "test", voice: "fable"} ✓
-          // - tts-1-hd: {model: "tts-1-hd", input: "test", voice: "fable"} ✓
-          // - gpt-4o-mini-tts: {model: "gpt-4o-mini-tts", input: "test", voice: "fable"} ✓
-          // - gpt-4o-mini-tts-2025-12-15: {model: "gpt-4o-mini-tts-2025-12-15", input: "test", voice: "fable"} ✓
-          return [
-            {
-              id: 'tts-1',
-              name: 'TTS-1',
-              provider: 'openai-audio-speech',
-              description: 'Optimized for real-time text-to-speech tasks',
-              contextLength: 0,
-              deprecated: false,
-            },
-            {
-              id: 'tts-1-hd',
-              name: 'TTS-1-HD',
-              provider: 'openai-audio-speech',
-              description: 'Higher fidelity audio output',
-              contextLength: 0,
-              deprecated: false,
-            },
-            {
-              id: 'gpt-4o-mini-tts',
-              name: 'GPT-4o Mini TTS',
-              provider: 'openai-audio-speech',
-              description: 'GPT-4o Mini optimized for text-to-speech',
-              contextLength: 0,
-              deprecated: false,
-            },
-            {
-              id: 'gpt-4o-mini-tts-2025-12-15',
-              name: 'GPT-4o Mini TTS (2025-12-15)',
-              provider: 'openai-audio-speech',
-              description: 'GPT-4o Mini TTS snapshot from 2025-12-15',
-              contextLength: 0,
-              deprecated: false,
-            },
-          ]
-        },
-      },
-      validators: {
-        validateProviderConfig: (config) => {
-          const errors = [
-            !config.apiKey && new Error('API Key is required'),
-            !config.baseUrl && new Error('Base URL is required. Default to https://api.openai.com/v1/ for official OpenAI API.'),
-          ].filter(Boolean)
-
-          const res = baseUrlValidator.value(config.baseUrl)
-          if (res) {
-            return res
-          }
-
-          return {
-            errors,
-            reason: errors.filter(e => e).map(e => String(e)).join(', ') || '',
-            valid: !!config.apiKey && !!config.baseUrl,
-          }
-        },
-      },
-    }),
-    'openai-compatible-audio-speech': buildOpenAICompatibleProvider({
-      id: 'openai-compatible-audio-speech',
-      name: 'OpenAI Compatible',
-      nameKey: 'settings.pages.providers.provider.openai-compatible.title',
-      descriptionKey: 'settings.pages.providers.provider.openai-compatible.description',
-      icon: 'i-lobe-icons:openai',
-      description: 'Connect to any API that follows the OpenAI specification.',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      capabilities: {
-        listVoices: async () => {
-          return []
-        },
-        listModels: async (config: Record<string, unknown>) => {
-          // Filter models to only include TTS models
-          const apiKey = typeof config.apiKey === 'string' ? config.apiKey.trim() : ''
-          let baseUrl = typeof config.baseUrl === 'string' ? config.baseUrl.trim() : ''
-
-          if (!baseUrl.endsWith('/'))
-            baseUrl += '/'
-
-          if (!apiKey || !baseUrl) {
-            return []
-          }
-
-          const provider = await createOpenAI(apiKey, baseUrl)
-          if (!provider || typeof provider.model !== 'function') {
-            return []
-          }
-
-          const models = await listModels({
-            apiKey,
-            baseURL: baseUrl,
-          })
-
-          // Filter for TTS models - look for models with "tts" in the ID
-          return models
-            .filter((model: any) => {
-              const modelId = model.id.toLowerCase()
-              // Include models that contain "tts" in their ID
-              return modelId.includes('tts')
-            })
-            .map((model: any) => {
-              return {
-                id: model.id,
-                name: model.name || model.display_name || model.id,
-                provider: 'openai-compatible-audio-speech',
-                description: model.description || '',
-                contextLength: model.context_length || 0,
-                deprecated: false,
-              } satisfies ModelInfo
-            })
-        },
-      },
-      creator: createOpenAI,
     }),
     'openai-audio-transcription': buildOpenAICompatibleProvider({
       id: 'openai-audio-transcription',
@@ -1345,361 +1043,318 @@ export const useProvidersStore = defineStore('providers', () => {
         },
       },
     },
-    'deepgram-tts': {
-      id: 'deepgram-tts',
+    'fish-audio': {
+      id: 'fish-audio',
       category: 'speech',
       tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.deepgram-tts.title',
-      name: 'Deepgram',
-      descriptionKey: 'settings.pages.providers.provider.deepgram-tts.description',
-      description: 'deepgram.com',
-      icon: 'i-simple-icons:deepgram',
+      nameKey: 'settings.pages.providers.provider.fish-audio.title',
+      name: 'Fish Audio',
+      descriptionKey: 'settings.pages.providers.provider.fish-audio.description',
+      description: 'fish.audio',
+      icon: 'i-lobe-icons:fishaudio',
       defaultOptions: () => ({
-        baseUrl: 'https://unspeech.hyp3r.link/v1/',
+        baseUrl: 'https://api.fish.audio/',
+        model: 's1',
       }),
       createProvider: async (config) => {
-        const provider = createUnDeepgram((config.apiKey as string).trim(), (config.baseUrl as string).trim()) as SpeechProviderWithExtraOptions<string, UnDeepgramOptions>
+        const apiKey = (config.apiKey as string).trim()
+        const baseUrl = (config.baseUrl as string || 'https://api.fish.audio/').trim()
+        const model = (config.model as string) || 's1'
+
+        const provider: SpeechProvider = {
+          speech: () => ({
+            baseURL: baseUrl,
+            model,
+            fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
+              const body = JSON.parse(init?.body as string || '{}')
+              const text = body.input
+              const voice = body.voice
+
+              const response = await fetch(`${baseUrl}v1/tts`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                  'model': model,
+                },
+                body: JSON.stringify({
+                  text,
+                  reference_id: voice || undefined,
+                  format: 'mp3',
+                  latency: 'normal',
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error(`Fish Audio TTS error: ${response.status} ${response.statusText}`)
+              }
+
+              return response
+            },
+          }),
+        }
         return provider
       },
-      capabilities: {
-        listVoices: async (config) => {
-          const provider = createUnDeepgram((config.apiKey as string).trim(), (config.baseUrl as string).trim()) as VoiceProviderWithExtraOptions<UnDeepgramOptions>
-
-          const voices = await listVoices({
-            ...provider.voice(),
-          })
-
-          return voices.map((voice) => {
-            return {
-              id: voice.id,
-              name: voice.name,
-              provider: 'deepgram-tts',
-              description: voice.description,
-              languages: voice.languages,
-              gender: voice.labels?.gender,
-            }
-          })
-        },
-      },
-      validators: {
-        validateProviderConfig: (config) => {
-          const errors: Error[] = []
-          if (!config.apiKey) {
-            errors.push(new Error('API key is required.'))
-          }
-
-          const baseUrlValidationResult = baseUrlValidator.value(config.baseUrl)
-          if (baseUrlValidationResult) {
-            errors.push(...(baseUrlValidationResult.errors as Error[]))
-          }
-
-          return {
-            errors,
-            reason: errors.map(e => e.message).join(', '),
-            valid: errors.length === 0,
-          }
-        },
-      },
-    },
-    'microsoft-speech': {
-      id: 'microsoft-speech',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.microsoft-speech.title',
-      name: 'Microsoft / Azure Speech',
-      descriptionKey: 'settings.pages.providers.provider.microsoft-speech.description',
-      description: 'speech.microsoft.com',
-      iconColor: 'i-lobe-icons:microsoft',
-      defaultOptions: () => ({
-        baseUrl: 'https://unspeech.hyp3r.link/v1/',
-      }),
-      createProvider: async config => createUnMicrosoft((config.apiKey as string).trim(), (config.baseUrl as string).trim()) as SpeechProviderWithExtraOptions<string, UnMicrosoftOptions>,
       capabilities: {
         listModels: async () => {
           return [
             {
-              id: 'v1',
-              name: 'v1',
-              provider: 'microsoft-speech',
-              description: '',
+              id: 's1',
+              name: 'OpenAudio S1',
+              provider: 'fish-audio',
+              description: 'Flagship 4B model, highest quality',
               contextLength: 0,
               deprecated: false,
             },
-          ]
-        },
-        listVoices: async (config) => {
-          const provider = createUnMicrosoft((config.apiKey as string).trim(), (config.baseUrl as string).trim()) as VoiceProviderWithExtraOptions<UnMicrosoftOptions>
-
-          const voices = await listVoices({
-            ...provider.voice({ region: config.region as string }),
-          })
-
-          return voices.map((voice) => {
-            return {
-              id: voice.id,
-              name: voice.name,
-              provider: 'microsoft-speech',
-              previewURL: voice.preview_audio_url,
-              languages: voice.languages,
-              gender: voice.labels?.gender,
-            }
-          })
+            {
+              id: 's1-mini',
+              name: 'OpenAudio S1-mini',
+              provider: 'fish-audio',
+              description: 'Distilled 0.5B model, faster inference',
+              contextLength: 0,
+              deprecated: false,
+            },
+          ] satisfies ModelInfo[]
         },
       },
       validators: {
         validateProviderConfig: (config) => {
           const errors = [
             !config.apiKey && new Error('API key is required.'),
-            !config.baseUrl && new Error('Base URL is required.'),
           ].filter(Boolean)
-
-          const res = baseUrlValidator.value(config.baseUrl)
-          if (res) {
-            return res
-          }
 
           return {
             errors,
             reason: errors.filter(e => e).map(e => String(e)).join(', ') || '',
-            valid: !!config.apiKey && !!config.baseUrl,
+            valid: !!config.apiKey,
           }
         },
       },
     },
-    'index-tts-vllm': {
-      id: 'index-tts-vllm',
+    'hume-ai': {
+      id: 'hume-ai',
       category: 'speech',
       tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.index-tts-vllm.title',
-      name: 'Index-TTS by Bilibili',
-      descriptionKey: 'settings.pages.providers.provider.index-tts-vllm.description',
-      description: 'index-tts.github.io',
-      iconColor: 'i-lobe-icons:bilibiliindex',
+      nameKey: 'settings.pages.providers.provider.hume-ai.title',
+      name: 'Hume AI',
+      descriptionKey: 'settings.pages.providers.provider.hume-ai.description',
+      description: 'hume.ai',
+      icon: 'i-lobe-icons:hume',
       defaultOptions: () => ({
-        baseUrl: 'http://localhost:11996/tts/',
+        baseUrl: 'https://api.hume.ai/',
       }),
       createProvider: async (config) => {
+        const apiKey = (config.apiKey as string).trim()
+        const baseUrl = (config.baseUrl as string || 'https://api.hume.ai/').trim()
+
         const provider: SpeechProvider = {
-          speech: () => {
-            const req = {
-              baseURL: config.baseUrl as string,
-              model: 'IndexTTS-1.5',
-            }
-            return req
-          },
+          speech: () => ({
+            baseURL: baseUrl,
+            model: 'octave',
+            fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
+              const body = JSON.parse(init?.body as string || '{}')
+              const text = body.input
+              const voice = body.voice
+
+              // Use streaming file endpoint for lower time-to-first-byte
+              const response = await fetch(`${baseUrl}v0/tts/stream/file`, {
+                method: 'POST',
+                headers: {
+                  'X-Hume-Api-Key': apiKey,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  utterances: [{
+                    text,
+                    ...(voice ? { voice: { name: voice, provider: 'HUME_AI' } } : {}),
+                  }],
+                  format: 'mp3',
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error(`Hume AI TTS error: ${response.status} ${response.statusText}`)
+              }
+
+              return response
+            },
+          }),
         }
         return provider
       },
       capabilities: {
         listVoices: async (config) => {
-          const voicesUrl = config.baseUrl as string
-          const response = await fetch(`${voicesUrl}audio/voices`)
-          if (!response.ok) {
-            throw new Error(`Failed to fetch voices: ${response.statusText}`)
-          }
-          const voices = await response.json()
-          return Object.keys(voices).map((voice: any) => {
-            return {
-              id: voice,
-              name: voice,
-              provider: 'index-tts-vllm',
-              // previewURL: voice.preview_audio_url,
-              languages: [{ code: 'cn', title: 'Chinese' }, { code: 'en', title: 'English' }],
-            }
-          })
-        },
-      },
-      validators: {
-        validateProviderConfig: async (config) => {
-          const errors = [
-            !config.baseUrl && new Error('Base URL is required. Default to http://localhost:11996/tts/ for Index-TTS.'),
-          ].filter(Boolean)
-
-          const res = baseUrlValidator.value(config.baseUrl)
-          if (res) {
-            return res
-          }
+          const apiKey = (config.apiKey as string)?.trim()
+          if (!apiKey) return []
+          const baseUrl = (config.baseUrl as string || 'https://api.hume.ai/').trim()
 
           try {
-            const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 5000)
-            const response = await fetch(`${config.baseUrl as string}audio/voices`, { signal: controller.signal })
-            clearTimeout(timeout)
+            const response = await fetch(`${baseUrl}v0/tts/voices?provider=HUME_AI`, {
+              headers: { 'X-Hume-Api-Key': apiKey },
+            })
+            if (!response.ok) return []
+            const data = await response.json()
 
-            if (!response.ok) {
-              const reason = `IndexTTS unreachable: HTTP ${response.status} ${response.statusText}`
-              return { errors: [new Error(reason)], reason, valid: false }
-            }
+            const voices = data.voices_page || data.voices || data || []
+            return (Array.isArray(voices) ? voices : []).map((voice: any) => ({
+              id: voice.name || voice.id,
+              name: voice.name || voice.id,
+              provider: 'hume-ai',
+              languages: [],
+            }))
           }
-          catch (err) {
-            const reason = `IndexTTS connection failed: ${String(err)}`
-            return { errors: [err as Error], reason, valid: false }
+          catch {
+            return []
           }
-
-          return {
-            errors,
-            reason: errors.filter(e => e).map(e => String(e)).join(', ') || '',
-            valid: errors.length === 0,
-          }
-        },
-      },
-    },
-    'alibaba-cloud-model-studio': {
-      id: 'alibaba-cloud-model-studio',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.alibaba-cloud-model-studio.title',
-      name: 'Alibaba Cloud Model Studio',
-      descriptionKey: 'settings.pages.providers.provider.alibaba-cloud-model-studio.description',
-      description: 'bailian.console.aliyun.com',
-      iconColor: 'i-lobe-icons:alibabacloud',
-      defaultOptions: () => ({
-        baseUrl: 'https://unspeech.hyp3r.link/v1/',
-      }),
-      createProvider: async config => createUnAlibabaCloud((config.apiKey as string).trim(), (config.baseUrl as string).trim()),
-      capabilities: {
-        listVoices: async (config) => {
-          const provider = createUnAlibabaCloud((config.apiKey as string).trim(), (config.baseUrl as string).trim()) as VoiceProviderWithExtraOptions<UnAlibabaCloudOptions>
-
-          const voices = await listVoices({
-            ...provider.voice(),
-          })
-
-          return voices.map((voice) => {
-            return {
-              id: voice.id,
-              name: voice.name,
-              provider: 'alibaba-cloud-model-studio',
-              compatibleModels: voice.compatible_models,
-              previewURL: voice.preview_audio_url,
-              languages: voice.languages,
-              gender: voice.labels?.gender,
-            }
-          })
-        },
-        listModels: async () => {
-          return [
-            {
-              id: 'cosyvoice-v1',
-              name: 'CosyVoice',
-              provider: 'alibaba-cloud-model-studio',
-              description: '',
-              contextLength: 0,
-              deprecated: false,
-            },
-            {
-              id: 'cosyvoice-v2',
-              name: 'CosyVoice (New)',
-              provider: 'alibaba-cloud-model-studio',
-              description: '',
-              contextLength: 0,
-              deprecated: false,
-            },
-          ]
         },
       },
       validators: {
         validateProviderConfig: (config) => {
           const errors = [
             !config.apiKey && new Error('API key is required.'),
-            !config.baseUrl && new Error('Base URL is required.'),
           ].filter(Boolean)
-
-          const res = baseUrlValidator.value(config.baseUrl)
-          if (res) {
-            return res
-          }
 
           return {
             errors,
             reason: errors.filter(e => e).map(e => String(e)).join(', ') || '',
-            valid: !!config.apiKey && !!config.baseUrl,
+            valid: !!config.apiKey,
           }
         },
       },
     },
-    'volcengine': {
-      id: 'volcengine',
+    'inworld-tts': {
+      id: 'inworld-tts',
       category: 'speech',
       tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.volcengine.title',
-      name: 'settings.pages.providers.provider.volcengine.title',
-      descriptionKey: 'settings.pages.providers.provider.volcengine.description',
-      description: 'volcengine.com',
-      iconColor: 'i-lobe-icons:volcengine',
+      nameKey: 'settings.pages.providers.provider.inworld-tts.title',
+      name: 'Inworld',
+      descriptionKey: 'settings.pages.providers.provider.inworld-tts.description',
+      description: 'inworld.ai',
+      icon: 'i-lobe-icons:inworld',
       defaultOptions: () => ({
-        baseUrl: 'https://unspeech.hyp3r.link/v1/',
+        baseUrl: 'https://api.inworld.ai/',
       }),
-      createProvider: async config => createUnVolcengine((config.apiKey as string).trim(), (config.baseUrl as string).trim()),
+      createProvider: async (config) => {
+        const apiKey = (config.apiKey as string).trim()
+        const baseUrl = (config.baseUrl as string || 'https://api.inworld.ai/').trim()
+
+        const provider: SpeechProvider = {
+          speech: () => ({
+            baseURL: baseUrl,
+            model: config.model as string || 'inworld-tts-1.5-max',
+            fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
+              const body = JSON.parse(init?.body as string || '{}')
+              const text = body.input
+              const voice = body.voice
+              const model = body.model || config.model as string || 'inworld-tts-1.5-max'
+
+              // Use v1 streaming endpoint for lower latency (returns raw audio bytes)
+              const response = await fetch(`${baseUrl}tts/v1/voice:stream`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Basic ${apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  text,
+                  voiceId: voice,
+                  modelId: model,
+                  audioConfig: {
+                    outputFormat: 'MP3',
+                  },
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error(`Inworld TTS error: ${response.status} ${response.statusText}`)
+              }
+
+              return response
+            },
+          }),
+        }
+        return provider
+      },
       capabilities: {
-        listVoices: async (config) => {
-          const provider = createUnVolcengine((config.apiKey as string).trim(), (config.baseUrl as string).trim()) as VoiceProviderWithExtraOptions<UnVolcengineOptions>
-
-          const voices = await listVoices({
-            ...provider.voice(),
-          })
-
-          return voices.map((voice) => {
-            return {
-              id: voice.id,
-              name: voice.name,
-              provider: 'volcano-engine',
-              previewURL: voice.preview_audio_url,
-              languages: voice.languages,
-              gender: voice.labels?.gender,
-            }
-          })
-        },
         listModels: async () => {
           return [
             {
-              id: 'v1',
-              name: 'v1',
-              provider: 'volcano-engine',
-              description: '',
+              id: 'inworld-tts-1.5-max',
+              name: 'TTS-1.5 Max',
+              provider: 'inworld-tts',
+              description: 'Highest quality, ~200ms latency',
               contextLength: 0,
               deprecated: false,
             },
-          ]
+            {
+              id: 'inworld-tts-1.5-mini',
+              name: 'TTS-1.5 Mini',
+              provider: 'inworld-tts',
+              description: 'Ultra-low latency, <100ms',
+              contextLength: 0,
+              deprecated: false,
+            },
+            {
+              id: 'inworld-tts-1-max',
+              name: 'TTS-1 Max',
+              provider: 'inworld-tts',
+              description: '8B parameter model',
+              contextLength: 0,
+              deprecated: false,
+            },
+            {
+              id: 'inworld-tts-1',
+              name: 'TTS-1',
+              provider: 'inworld-tts',
+              description: '1B parameter model',
+              contextLength: 0,
+              deprecated: false,
+            },
+          ] satisfies ModelInfo[]
+        },
+        listVoices: async (config) => {
+          const apiKey = (config.apiKey as string)?.trim()
+          if (!apiKey) return []
+          const baseUrl = (config.baseUrl as string || 'https://api.inworld.ai/').trim()
+
+          try {
+            const response = await fetch(`${baseUrl}tts/v1alpha/voices`, {
+              headers: { 'Authorization': `Basic ${apiKey}` },
+            })
+            if (!response.ok) return []
+            const data = await response.json()
+
+            const voices = data.voices || data || []
+            return (Array.isArray(voices) ? voices : []).map((voice: any) => ({
+              id: voice.name || voice.voiceId,
+              name: voice.name || voice.voiceId,
+              provider: 'inworld-tts',
+              gender: voice.gender,
+              languages: (voice.naturalLanguages || voice.languages || []).map((lang: any) => ({
+                code: typeof lang === 'string' ? lang : (lang.languageCode || lang.code || ''),
+                title: typeof lang === 'string' ? lang : (lang.name || lang.title || ''),
+              })),
+            }))
+          }
+          catch {
+            return []
+          }
         },
       },
       validators: {
         validateProviderConfig: (config) => {
           const errors = [
             !config.apiKey && new Error('API key is required.'),
-            !config.baseUrl && new Error('Base URL is required.'),
-            !((config.app as any)?.appId) && new Error('App ID is required.'),
           ].filter(Boolean)
-
-          const res = baseUrlValidator.value(config.baseUrl)
-          if (res) {
-            return res
-          }
 
           return {
             errors,
             reason: errors.filter(e => e).map(e => String(e)).join(', ') || '',
-            valid: !!config.apiKey && !!config.baseUrl && !!config.app && !!(config.app as any).appId,
+            valid: !!config.apiKey,
           }
         },
       },
     },
-    'comet-api-speech': buildOpenAICompatibleProvider({
-      id: 'comet-api-speech',
-      name: 'CometAPI Speech',
-      nameKey: 'settings.pages.providers.provider.comet-api.title',
-      descriptionKey: 'settings.pages.providers.provider.comet-api.description',
-      icon: 'i-lobe-icons:cometapi',
-      description: 'cometapi.com',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      defaultBaseUrl: 'https://api.cometapi.com/v1/',
-      creator: (apiKey, baseURL = 'https://api.cometapi.com/v1/') => merge(
-        createModelProvider({ apiKey, baseURL }),
-        createSpeechProvider({ apiKey, baseURL }),
-      ),
-      validation: ['model_list'],
-    }),
     'comet-api-transcription': buildOpenAICompatibleProvider({
       id: 'comet-api-transcription',
       name: 'CometAPI Transcription',
@@ -2084,302 +1739,6 @@ export const useProvidersStore = defineStore('providers', () => {
                 valid: false,
               }
             })
-        },
-      },
-    },
-    'player2-speech': {
-      id: 'player2-speech',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.player2.title',
-      name: 'Player2 Speech',
-      descriptionKey: 'settings.pages.providers.provider.player2.description',
-      description: 'player2.game',
-      icon: 'i-lobe-icons:player2',
-      defaultOptions: () => ({
-        baseUrl: 'http://localhost:4315/v1/',
-      }),
-      createProvider: async config => createPlayer2((config.baseUrl as string).trim(), 'airi'),
-      capabilities: {
-        listVoices: async (config) => {
-          const baseUrl = (config.baseUrl as string).endsWith('/') ? (config.baseUrl as string).slice(0, -1) : config.baseUrl as string
-          return await fetch(`${baseUrl}/tts/voices`).then(res => res.json()).then(({ voices }) => (voices as { id: string, language: 'american_english' | 'british_english' | 'japanese' | 'mandarin_chinese' | 'spanish' | 'french' | 'hindi' | 'italian' | 'brazilian_portuguese', name: string, gender: string }[]).map(({ id, language, name, gender }) => (
-            {
-
-              id,
-              name,
-              provider: 'player2-speech',
-              gender,
-              languages: [{
-                american_english: {
-                  code: 'en',
-                  title: 'English',
-                },
-                british_english: {
-                  code: 'en',
-                  title: 'English',
-                },
-                japanese: {
-                  code: 'ja',
-                  title: 'Japanese',
-                },
-                mandarin_chinese: {
-                  code: 'zh',
-                  title: 'Chinese',
-                },
-                spanish: {
-                  code: 'es',
-                  title: 'Spanish',
-                },
-                french: {
-                  code: 'fr',
-                  title: 'French',
-                },
-                hindi: {
-                  code: 'hi',
-                  title: 'Hindi',
-                },
-
-                italian: {
-                  code: 'it',
-                  title: 'Italian',
-                },
-                brazilian_portuguese:
-                {
-                  code: 'pt',
-                  title: 'Portuguese',
-                },
-
-              }[language]],
-            }
-          )))
-        },
-      },
-      validators: {
-        validateProviderConfig: async (config) => {
-          const errors = [
-            !config.baseUrl && new Error('Base URL is required. Default to http://localhost:4315/v1/'),
-          ].filter(Boolean)
-
-          const res = baseUrlValidator.value(config.baseUrl)
-          if (res)
-            return res
-
-          try {
-            const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 5000)
-            const response = await fetch(`${config.baseUrl as string}health`, {
-              method: 'GET',
-              headers: {
-                'player2-game-key': 'airi',
-              },
-              signal: controller.signal,
-            })
-            clearTimeout(timeout)
-
-            if (!response.ok) {
-              const reason = `Player2 speech unreachable: HTTP ${response.status} ${response.statusText}`
-              return { errors: [new Error(reason)], reason, valid: false }
-            }
-          }
-          catch (err) {
-            const reason = `Player2 speech connection failed: ${String(err)}`
-            return { errors: [err as Error], reason, valid: false }
-          }
-
-          return {
-            errors,
-            reason: errors.filter(e => e).map(e => String(e)).join(', ') || '',
-            valid: errors.length === 0,
-          }
-        },
-      },
-    },
-    'kokoro-local': {
-      id: 'kokoro-local',
-      category: 'speech',
-      tasks: ['text-to-speech'],
-      nameKey: 'settings.pages.providers.provider.kokoro-local.title',
-      name: 'Kokoro TTS',
-      descriptionKey: 'settings.pages.providers.provider.kokoro-local.description',
-      description: 'Local text-to-speech using Kokoro-82M.',
-      icon: 'i-lobe-icons:speaker',
-
-      defaultOptions: () => {
-        const hasWebGPU = typeof navigator !== 'undefined' && !!navigator.gpu
-        const model = getDefaultKokoroModel(hasWebGPU)
-        return {
-          model,
-          voiceId: '',
-        }
-      },
-
-      createProvider: async (_config) => {
-        // Import the worker manager
-        const workerManagerPromise = getKokoroWorker()
-
-        const provider: SpeechProvider = {
-          speech: () => {
-            return {
-              baseURL: 'http://kokoro-local/v1/',
-              model: 'kokoro-82m',
-              fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
-                try {
-                  // Parse OpenAI-compatible request body
-                  if (!init?.body || typeof init.body !== 'string') {
-                    throw new Error('Invalid request body')
-                  }
-                  const body = JSON.parse(init.body)
-                  const text = body.input
-                  const voice = body.voice
-
-                  if (!voice) {
-                    throw new Error('Voice parameter is required')
-                  }
-
-                  // Generate audio in the worker thread
-                  const buffer = await (await workerManagerPromise).generate(text, voice)
-
-                  return new Response(buffer, {
-                    status: 200,
-                    headers: {
-                      'Content-Type': 'audio/wav',
-                    },
-                  })
-                }
-                catch (error) {
-                  console.error('Kokoro TTS generation failed:', error)
-                  throw error
-                }
-              },
-            }
-          },
-        }
-
-        return provider
-      },
-
-      capabilities: {
-        listModels: async (_config: Record<string, unknown>) => {
-          const hasWebGPU = typeof navigator !== 'undefined' && !!navigator.gpu
-          return kokoroModelsToModelInfo(hasWebGPU, t)
-        },
-
-        loadModel: async (config: Record<string, unknown>, _hooks?: { onProgress?: (progress: ProgressInfo) => Promise<void> | void }) => {
-          const modelId = config.model as string
-
-          if (!modelId) {
-            throw new Error('No model specified')
-          }
-
-          const modelDef = KOKORO_MODELS.find(m => m.id === modelId)
-          if (!modelDef) {
-            throw new Error(`Invalid model: ${modelId}. Must be one of: ${KOKORO_MODELS.map(m => m.id).join(', ')}`)
-          }
-
-          // Validate platform requirements
-          if (modelDef.platform === 'webgpu') {
-            const hasWebGPU = typeof navigator !== 'undefined' && !!navigator.gpu
-            if (!hasWebGPU) {
-              throw new Error('WebGPU is required for this model but is not available in your browser')
-            }
-          }
-
-          try {
-            const workerManager = await getKokoroWorker()
-            await workerManager.loadModel(modelDef.quantization, modelDef.platform, { onProgress: _hooks?.onProgress })
-          }
-          catch (error) {
-            console.error('Failed to load Kokoro model:', error)
-            throw error
-          }
-        },
-
-        listVoices: async (config: Record<string, unknown>) => {
-          try {
-            // Reload the model before fetching voices
-            const modelId = config.model as string
-            if (modelId) {
-              const modelDef = KOKORO_MODELS.find(m => m.id === modelId)
-              if (modelDef) {
-                // Validate platform requirements
-                if (modelDef.platform === 'webgpu') {
-                  const hasWebGPU = typeof navigator !== 'undefined' && !!navigator.gpu
-                  if (!hasWebGPU) {
-                    throw new Error('WebGPU is required for this model but is not available in your browser')
-                  }
-                }
-
-                // Load the model
-                const workerManager = await getKokoroWorker()
-                await workerManager.loadModel(modelDef.quantization, modelDef.platform)
-              }
-            }
-
-            // Get worker manager and fetch voices from the model
-            const workerManager = await getKokoroWorker()
-            const modelVoices = workerManager.getVoices()
-
-            // Language code mapping
-            const languageMap: Record<string, { code: string, title: string }> = {
-              'en-us': { code: 'en-US', title: 'English (US)' },
-              'en-gb': { code: 'en-GB', title: 'English (UK)' },
-              'ja': { code: 'ja', title: 'Japanese' },
-              'zh-cn': { code: 'zh-CN', title: 'Chinese (Mandarin)' },
-              'es': { code: 'es', title: 'Spanish' },
-              'fr': { code: 'fr', title: 'French' },
-              'hi': { code: 'hi', title: 'Hindi' },
-              'it': { code: 'it', title: 'Italian' },
-              'pt-br': { code: 'pt-BR', title: 'Portuguese (Brazil)' },
-            }
-
-            // Transform the voices object to the expected array format
-            return Object.entries(modelVoices).map(([id, voice]: [string, { language: string, name: string, gender: string }]) => {
-              const languageCode = voice.language.toLowerCase()
-              const languageInfo = languageMap[languageCode] || { code: languageCode, title: voice.language }
-
-              return {
-                id,
-                name: `${voice.name} (${voice.gender}, ${languageInfo.title.split('(')[0].trim()})`,
-                provider: 'kokoro-local',
-                languages: [languageInfo],
-                gender: voice.gender.toLowerCase(),
-              }
-            })
-          }
-          catch (error) {
-            console.error('Failed to fetch Kokoro voices:', error)
-            // Return empty array if model not loaded yet
-            return []
-          }
-        },
-      },
-
-      validators: {
-        validateProviderConfig: async (config: any) => {
-          const model = config.model as string
-
-          if (!model) {
-            return {
-              errors: [new Error('No model selected')],
-              reason: 'Please select a model from the dropdown menu',
-              valid: false,
-            }
-          }
-
-          if (!KOKORO_MODELS.some(m => m.id === model)) {
-            return {
-              errors: [new Error(`Invalid model: ${model}`)],
-              reason: `Invalid model. Must be one of: ${KOKORO_MODELS.map(m => m.id).join(', ')}`,
-              valid: false,
-            }
-          }
-
-          return {
-            errors: [],
-            reason: '',
-            valid: true,
-          }
         },
       },
     },
