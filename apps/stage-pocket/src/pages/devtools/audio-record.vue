@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { useDevicesList, useObjectUrl } from '@vueuse/core'
+import { useObjectUrl } from '@vueuse/core'
 import { BufferTarget, MediaStreamAudioTrackSource, Output, QUALITY_MEDIUM, WavOutputFormat } from 'mediabunny'
 import { computed, ref } from 'vue'
 
-const { audioInputs } = useDevicesList({ constraints: { audio: true }, requestPermissions: true })
-const constraintId = ref('')
-
-async function getMediaStreamTrack(constraint: ConstrainDOMString) {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: constraint } })
+async function getMediaStreamTrack() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
   return stream.getAudioTracks()[0]
 }
 
@@ -19,7 +16,7 @@ const recorded = ref<ArrayBuffer[]>([])
 const recordedUrls = computed(() => recorded.value.map(rec => useObjectUrl(new Blob([rec], { type: format })).value))
 
 async function handleStart() {
-  audioInputTrack = await getMediaStreamTrack(constraintId.value)
+  audioInputTrack = await getMediaStreamTrack()
   output = new Output({ format: new WavOutputFormat(), target: new BufferTarget() })
 
   const audioSource = new MediaStreamAudioTrackSource(audioInputTrack, { codec: 'pcm-f32', bitrate: QUALITY_MEDIUM })
@@ -45,16 +42,6 @@ function handleCancel() {
 
 <template>
   <div>
-    <div>
-      <select v-model="constraintId">
-        <option value="">
-          Select
-        </option>
-        <option v-for="(item, index) of audioInputs" :key="index" :value="item.deviceId">
-          {{ item.label }}
-        </option>
-      </select>
-    </div>
     <div space-x-2>
       <button @click="handleStart">
         Start

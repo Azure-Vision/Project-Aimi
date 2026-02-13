@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { HearingTranscriptionResult } from '../../../stores/modules/hearing'
 
-import { Button, FieldRange, FieldSelect } from '@proj-airi/ui'
+import { Button, FieldRange } from '@proj-airi/ui'
 import { until } from '@vueuse/core'
-import { computed, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, onUnmounted, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useAudioAnalyzer } from '../../../composables/audio/audio-analyzer'
@@ -19,7 +19,7 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
-const { audioInputs, selectedAudioInput, stream, stopStream, startStream } = useAudioDevice()
+const { stream, stopStream, startStream } = useAudioDevice()
 const { volumeLevel, stopAnalyzer, startAnalyzer } = useAudioAnalyzer()
 const { startRecord, stopRecord, onStopRecord } = useAudioRecorder(stream)
 
@@ -43,18 +43,6 @@ const audioURLs = computed(() => {
   })
 })
 const transcriptions = ref<string[]>([])
-
-watch(selectedAudioInput, async () => {
-  if (isMonitoring.value) {
-    await setupAudioMonitoring()
-  }
-})
-
-watch(audioInputs, () => {
-  if (!selectedAudioInput.value && audioInputs.value.length > 0) {
-    selectedAudioInput.value = audioInputs.value.find(input => input.deviceId === 'default')?.deviceId || audioInputs.value[0].deviceId
-  }
-})
 
 async function setupAudioMonitoring() {
   try {
@@ -170,22 +158,6 @@ onUnmounted(() => {
         </div>
       </div>
     </h2>
-
-    <!-- Audio Input Selection -->
-    <div mb-2>
-      <FieldSelect
-        v-model="selectedAudioInput"
-        label="Audio Input Device"
-        description="Select the audio input device for your hearing module."
-        :options="audioInputs.map(input => ({
-          label: input.label || input.deviceId,
-          value: input.deviceId,
-        }))"
-        placeholder="Select an audio input device"
-        layout="vertical"
-        h-fit w-full
-      />
-    </div>
 
     <Button class="my-4" w-full @click="toggleMonitoring">
       {{ isMonitoring ? 'Stop Monitoring' : 'Start Monitoring' }}

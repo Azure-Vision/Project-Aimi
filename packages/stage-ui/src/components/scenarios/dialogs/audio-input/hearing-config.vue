@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import { Callout, FieldSelect } from '@proj-airi/ui'
+import { Callout } from '@proj-airi/ui'
 import { computed } from 'vue'
 
 const props = withDefaults(defineProps<{
   enabled?: boolean
   granted?: boolean
-  audioInputs?: MediaDeviceInfo[]
   volumeLevel?: number
 }>(), {
   enabled: false,
   granted: false,
-  audioInputs: () => [],
   volumeLevel: 0,
 })
 
 const enabled = defineModel<boolean>('enabled')
-const selectedAudioInput = defineModel<string>('selectedAudioInput')
 
 const ringEnabledClass = computed(() => enabled.value
   ? 'bg-primary-500/15 dark:bg-primary-600/20'
@@ -70,16 +67,5 @@ const ringEnabledClass = computed(() => enabled.value
       </div>
     </div>
 
-    <!-- Always-visible device selector -->
-    <div class="mt-3 w-full">
-      <FieldSelect
-        v-model="selectedAudioInput"
-        label="Input device"
-        description="Select the microphone you want to use."
-        :options="props.audioInputs.map(device => ({ label: device.label || 'Unknown Device', value: device.deviceId }))"
-        placeholder="Select microphone"
-        layout="vertical"
-      />
-    </div>
   </div>
 </template>

@@ -10,7 +10,7 @@ import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consci
 import { useHearingSpeechInputPipeline, useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useSettings, useSettingsAudioDevice } from '@proj-airi/stage-ui/stores/settings'
-import { BasicTextarea, FieldSelect } from '@proj-airi/ui'
+import { BasicTextarea } from '@proj-airi/ui'
 import { until } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui'
@@ -29,7 +29,7 @@ const { activeProvider, activeModel } = storeToRefs(useConsciousnessStore())
 const { themeColorsHueDynamic } = storeToRefs(useSettings())
 
 const { askPermission, startStream } = useSettingsAudioDevice()
-const { enabled, selectedAudioInput, stream, audioInputs } = storeToRefs(useSettingsAudioDevice())
+const { enabled, stream } = storeToRefs(useSettingsAudioDevice())
 const chatOrchestrator = useChatOrchestratorStore()
 const chatSession = useChatSessionStore()
 const { ingest, onAfterMessageComposed, discoverToolsCompatibility } = chatOrchestrator
@@ -483,14 +483,6 @@ watch(autoSendEnabled, (enabled) => {
                   </p>
                 </div>
 
-                <FieldSelect
-                  v-model="selectedAudioInput"
-                  label="Input device"
-                  description="Select the microphone you want to use."
-                  :options="audioInputs.map(device => ({ label: device.label || 'Unknown Device', value: device.deviceId }))"
-                  layout="vertical"
-                  placeholder="Select microphone"
-                />
               </TooltipContent>
             </Transition>
           </TooltipRoot>

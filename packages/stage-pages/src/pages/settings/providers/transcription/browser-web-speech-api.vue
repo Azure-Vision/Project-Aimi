@@ -111,7 +111,7 @@ onMounted(async () => {
 
 // Speech-to-Text test state (always uses Web Speech API)
 const { stopStream, startStream } = useSettingsAudioDevice()
-const { audioInputs, selectedAudioInput, stream } = storeToRefs(useSettingsAudioDevice())
+const { stream } = storeToRefs(useSettingsAudioDevice())
 
 const isTestingSTT = ref(false)
 const testTranscriptionText = ref<string>('')
@@ -134,11 +134,6 @@ function handleStreamStartError() {
 
 // Speech-to-Text test functions (hardcoded to use Web Speech API)
 async function startSTTTest() {
-  if (!selectedAudioInput.value) {
-    testTranscriptionError.value = 'Please select an audio input device first'
-    return
-  }
-
   if (!isWebSpeechAPIAvailable.value) {
     testTranscriptionError.value = 'Web Speech API is not available in this browser. Please use Chrome, Edge, or Safari.'
     return
@@ -390,33 +385,9 @@ onUnmounted(() => {
           </div>
 
           <div v-else class="flex flex-col gap-4">
-            <!-- Audio Input Device Selector - Always visible when Web Speech API is available -->
-            <div class="flex items-center gap-2">
-              <FieldSelect
-                v-model="selectedAudioInput"
-                label="Audio Input Device"
-                description="Select the audio input device for testing"
-                :options="audioInputs.map(input => ({
-                  label: input.label || input.deviceId,
-                  value: input.deviceId,
-                }))"
-                placeholder="Select an audio input device"
-                layout="vertical"
-                class="flex-1"
-              />
-            </div>
-
-            <!-- Warning if no device selected -->
-            <div v-if="!selectedAudioInput" class="border border-amber-200 rounded-lg bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
-              <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                <div i-solar:warning-circle-line-duotone class="text-lg" />
-                <span class="text-sm font-medium">Please select an audio input device to test</span>
-              </div>
-            </div>
-
             <div class="flex items-center gap-2">
               <Button
-                :disabled="!selectedAudioInput || (isTranscribing && !isTestingSTT)"
+                :disabled="isTranscribing && !isTestingSTT"
                 class="flex-1"
                 @click="isTestingSTT ? stopSTTTest() : startSTTTest()"
               >

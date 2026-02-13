@@ -12,7 +12,7 @@ import { useElectronEventaInvoke } from '../../../composables/electron-vueuse/us
 const show = defineModel('show', { type: Boolean, default: false })
 
 const settingsAudioDeviceStore = useSettingsAudioDevice()
-const { enabled, selectedAudioInput, stream, audioInputs } = storeToRefs(settingsAudioDeviceStore)
+const { enabled, stream } = storeToRefs(settingsAudioDeviceStore)
 const { startStream, stopStream } = settingsAudioDeviceStore
 
 const getMediaAccessStatus = useElectronEventaInvoke(electron.systemPreferences.getMediaAccessStatus)
@@ -49,9 +49,7 @@ onUnmounted(async () => {
   <HearingConfigDialog
     v-model:show="show"
     v-model:enabled="enabled"
-    v-model:selected-audio-input="selectedAudioInput"
     :granted="mediaAccessStatus !== 'denied' && mediaAccessStatus !== 'restricted'"
-    :audio-inputs="audioInputs"
     :volume-level="volumeLevel"
   >
     <slot />

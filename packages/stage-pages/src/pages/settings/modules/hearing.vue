@@ -34,7 +34,7 @@ const { configuredTranscriptionProvidersMetadata } = storeToRefs(providersStore)
 
 const { trackProviderClick } = useAnalytics()
 const { stopStream, startStream } = useSettingsAudioDevice()
-const { audioInputs, selectedAudioInput, stream } = storeToRefs(useSettingsAudioDevice())
+const { stream } = storeToRefs(useSettingsAudioDevice())
 const { startRecord, stopRecord, onStopRecord } = useAudioRecorder(stream)
 const { startAnalyzer, stopAnalyzer, onAnalyzerUpdate, volumeLevel } = useAudioAnalyzer()
 const { audioContext } = storeToRefs(useAudioContext())
@@ -134,11 +134,6 @@ const isSpeech = computed(() => {
 
 async function setupAudioMonitoring() {
   try {
-    if (!selectedAudioInput.value) {
-      console.warn('No audio input device selected')
-      return
-    }
-
     await stopAudioMonitoring()
 
     await startStream()
@@ -301,11 +296,6 @@ async function startSTTTest() {
     return
   }
 
-  if (!selectedAudioInput.value) {
-    testTranscriptionError.value = 'Please select an audio input device first'
-    return
-  }
-
   testTranscriptionError.value = ''
   testTranscriptionText.value = ''
   testStreamingText.value = ''
@@ -432,7 +422,6 @@ async function stopSTTTest() {
 // Note: STT test transcription is now handled directly in onStopRecord handler above
 // This watch is kept for potential future use but is no longer needed for STT tests
 
-watch(selectedAudioInput, async () => isMonitoring.value && await setupAudioMonitoring())
 
 function handleStreamStartError() {
   testTranscriptionError.value = 'Failed to start audio stream. Please check microphone permissions.'
@@ -485,21 +474,6 @@ onUnmounted(() => {
   <div flex="~ col md:row gap-6">
     <div bg="neutral-100 dark:[rgba(0,0,0,0.3)]" rounded-xl p-4 flex="~ col gap-4" class="h-fit w-full md:w-[40%]">
       <div flex="~ col gap-4">
-        <!-- Audio Input Selection -->
-        <div>
-          <FieldSelect
-            v-model="selectedAudioInput"
-            label="Audio Input Device"
-            description="Select the audio input device for your hearing module."
-            :options="audioInputs.map(input => ({
-              label: input.label || input.deviceId,
-              value: input.deviceId,
-            }))"
-            placeholder="Select an audio input device"
-            layout="vertical"
-          />
-        </div>
-
         <div flex="~ col gap-4">
           <div>
             <h2 class="text-lg text-neutral-500 md:text-2xl dark:text-neutral-500">
@@ -828,13 +802,6 @@ onUnmounted(() => {
           <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400">
             <div i-solar:warning-circle-line-duotone class="text-lg" />
             <span class="text-sm font-medium">Please select a transcription provider above to test</span>
-          </div>
-        </div>
-
-        <div v-else-if="!selectedAudioInput" class="border border-amber-200 rounded-lg bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
-          <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-            <div i-solar:warning-circle-line-duotone class="text-lg" />
-            <span class="text-sm font-medium">Please select an audio input device to test</span>
           </div>
         </div>
 

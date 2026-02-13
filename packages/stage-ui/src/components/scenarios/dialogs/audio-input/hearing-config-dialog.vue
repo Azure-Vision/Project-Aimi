@@ -10,12 +10,10 @@ const props = defineProps<{
   overlayDim?: boolean
   overlayBlur?: boolean
   granted?: boolean
-  audioInputs?: MediaDeviceInfo[]
   volumeLevel?: number
 }>()
 
 const showDialog = defineModel('show', { type: Boolean, default: false, required: false })
-const selectedAudioInput = defineModel<string>('selectedAudioInput')
 const enabled = defineModel<boolean>('enabled', { default: false })
 
 const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -44,8 +42,6 @@ onMounted(() => screenSafeArea.update())
         </VisuallyHidden>
         <HearingConfig
           v-model:enabled="enabled"
-          v-model:selected-audio-input="selectedAudioInput"
-          :audio-inputs="props.audioInputs"
           :granted="props.granted"
           :volume-level="props.volumeLevel"
         />
@@ -63,8 +59,6 @@ onMounted(() => screenSafeArea.update())
         <DrawerHandle my-2 />
         <HearingConfig
           v-model:enabled="enabled"
-          v-model:selected-audio-input="selectedAudioInput"
-          :audio-inputs="props.audioInputs"
           :granted="props.granted"
           :volume-level="props.volumeLevel"
         />

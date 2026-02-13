@@ -51,7 +51,7 @@ const { activeProvider, activeModel } = storeToRefs(useConsciousnessStore())
 useResizeObserver(document.documentElement, () => screenSafeArea.update())
 const { themeColorsHueDynamic, stageViewControlsEnabled } = storeToRefs(useSettings())
 const settingsAudioDevice = useSettingsAudioDevice()
-const { enabled, selectedAudioInput, stream, audioInputs } = storeToRefs(settingsAudioDevice)
+const { enabled, stream } = storeToRefs(settingsAudioDevice)
 const { ingest, onAfterMessageComposed, discoverToolsCompatibility } = chatOrchestrator
 const { t } = useI18n()
 const { audioContext } = useAudioContext()
@@ -175,8 +175,6 @@ onMounted(() => {
           <HearingConfigDialog
             v-model:show="hearingDialogOpen"
             v-model:enabled="enabled"
-            v-model:selected-audio-input="selectedAudioInput"
-            :audio-inputs="audioInputs"
             :volume-level="volumeLevel"
             :granted="true"
           >
